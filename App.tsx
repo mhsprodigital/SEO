@@ -335,8 +335,8 @@ const App: React.FC = () => {
             case ViewState.DASHBOARD:
                 return (
                     <Dashboard 
-                        employees={employees}
-                        assignments={assignments}
+                        employees={accessibleEmployees}
+                        assignments={accessibleAssignments}
                         startDate={currentWeekStart}
                         shiftDefs={settings.shiftDefs}
                         professionalCategories={professionalCategories}
@@ -653,7 +653,7 @@ const App: React.FC = () => {
                                 onChange={(e) => setGlobalSectorFilter(e.target.value)}
                             >
                                 <option value="Todos">Todos os Setores{effectiveUnitFilter !== 'Todos' ? ` do Núcleo` : ''}</option>
-                                {settings?.units?.find((u: any) => u.name === effectiveUnitFilter)?.sectors?.map((s: string) => (
+                                {settings?.units?.find((u: any) => u.name.trim() === effectiveUnitFilter.trim())?.sectors?.map((s: string) => (
                                     <option key={s} value={s}>{s}</option>
                                 ))}
                             </select>

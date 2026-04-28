@@ -14,6 +14,7 @@ export const RulesService = {
                 // Don't count Afastamento or any TPD (Extra hour) towards contractual duration
                 if (def && def.category === 'Afastamento') return false;
                 if (def && def.code.startsWith('TPD')) return false;
+                if (def && def.category === 'Banco de Horas' && (def.code.includes('-') || def.code.includes('NEG'))) return false;
                 return true;
             })
             .reduce((sum, a) => sum + a.duration, 0);
@@ -52,6 +53,7 @@ export const RulesService = {
                 // Don't count Afastamento or any TPD (Extra hour) towards contractual duration
                 if (def && def.category === 'Afastamento') return false;
                 if (def && def.code.startsWith('TPD')) return false;
+                if (def && def.category === 'Banco de Horas' && (def.code.includes('-') || def.code.includes('NEG'))) return false;
                 return a.date >= startStr && a.date <= endStr;
             })
             .reduce((sum, a) => sum + a.duration, 0);

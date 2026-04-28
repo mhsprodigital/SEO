@@ -37,21 +37,32 @@ const StaffForm: React.FC<StaffFormProps> = ({ onSave, onCancel, initialData, pr
 
     const [formData, setFormData] = useState<Partial<Employee>>(initialData || {
         contractHours: 40,
-        unit: restrictedUnit || units[0]?.name || '',
+        unit: restrictedUnit || '',
         sector: '',
         employmentType: 'Efetivo',
         preferences: defaultPreferences
     });
 
     useEffect(() => {
-        // Se mudou de unidade, reseta o setor caso não exista
-        const currentUnit = units.find(u => u.name === formData.unit);
+        // Se ainda não temos a lista de unidades carregada ou não há unidade selecionada, não fazemos nada
+        if (!formData.unit || units.length === 0) return;
+
+        const currentUnit = units.find(u => u.name.trim() === formData.unit.trim());
+        
         if (currentUnit && currentUnit.sectors) {
-            if (!formData.sector || !currentUnit.sectors.includes(formData.sector)) {
-                setFormData(prev => ({ ...prev, sector: currentUnit.sectors[0] || '' }));
+            // Só alteramos o setor automaticamente se:
+            // 1. O servidor NÃO for uma edição (novo cadastro)
+            // 2. OU se o setor atual for inválido para a unidade selecionada
+            const isSectorValid = formData.sector && currentUnit.sectors.includes(formData.sector);
+            
+            if (!isSectorValid) {
+                setFormData(prev => ({ 
+                    ...prev, 
+                    sector: currentUnit.sectors[0] || '' 
+                }));
             }
         }
-    }, [formData.unit, units]);
+    }, [formData.unit, units]); // Removido formData.id para simplificar e evitar re-triggers desnecessários
 
     const [prefs, setPrefs] = useState<EmployeePreferences>(initialData?.preferences || defaultPreferences);
 
@@ -313,7 +324,7 @@ const StaffForm: React.FC<StaffFormProps> = ({ onSave, onCancel, initialData, pr
                                 className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-gdf-primary focus:border-transparent transition-all shadow-sm cursor-pointer"
                             >
                                 <option value="" disabled>Selecione um setor...</option>
-                                {units.find(u => u.name === formData.unit)?.sectors?.map((s) => (
+                                {units.find(u => u.name.trim() === (formData.unit || '').trim())?.sectors?.map((s) => (
                                     <option key={s} value={s}>{s}</option>
                                 ))}
                             </select>

@@ -291,13 +291,15 @@ const ScaleGrid: React.FC<ScaleGridProps> = ({ employees, assignments, onAssignm
     }, [localAssignments]);
 
     const isShiftInPeriod = (shiftCode: string, cat: string, checkPeriod: 'Manhã'|'Tarde'|'Noite'): boolean => {
-        if (!['Manhã', 'Tarde', 'Noite', 'Legenda Especial'].includes(cat)) return false;
+        if (!['Manhã', 'Tarde', 'Noite', 'Legenda Especial', 'Banco de Horas'].includes(cat)) return false;
         
+        if (cat === 'Banco de Horas' && (shiftCode.includes('-') || shiftCode.includes('NEG'))) return false;
+
         let isM = cat === 'Manhã';
         let isT = cat === 'Tarde';
         let isN = cat === 'Noite';
 
-        if (cat === 'Legenda Especial' || shiftCode.includes('ST6 SN12') || shiftCode.includes('SM6 ST6')) {
+        if (cat === 'Legenda Especial' || cat === 'Banco de Horas' || shiftCode.includes('ST6 SN12') || shiftCode.includes('SM6 ST6')) {
             if (shiftCode.includes('SM6 ST6')) {
                  isM = true; isT = true;
             } else if (shiftCode.includes('ST6 SN12')) {
@@ -885,13 +887,16 @@ const ScaleGrid: React.FC<ScaleGridProps> = ({ employees, assignments, onAssignm
                                                     {emp.name.charAt(0)}
                                                 </div>
                                                 <div>
-                                                    <div className="font-semibold text-gray-900 truncate w-40 flex items-center gap-1">
-                                                        {emp.name}
+                                                    <div className="font-semibold text-gray-900 flex flex-wrap items-center gap-1 leading-tight max-w-[180px]">
+                                                        <span className="break-words whitespace-normal">{emp.name}</span>
                                                         {emp.isTpdOnly && (
                                                             <span className="bg-yellow-100 text-yellow-800 text-[9px] px-1 py-0.5 rounded border border-yellow-200 font-bold" title="Somente TPD (Hora Extra)">TPD</span>
                                                         )}
                                                     </div>
-                                                    <div className="text-[10px] text-gray-500">{emp.role}</div>
+                                                    <div className="text-[10px] text-gray-500 mt-0.5">{emp.role}</div>
+                                                    {emp.registration && (
+                                                        <div className="text-[10px] text-gray-400">Matrícula: {emp.registration}</div>
+                                                    )}
                                                 </div>
                                             </div>
                                         </td>

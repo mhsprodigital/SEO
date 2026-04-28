@@ -80,13 +80,15 @@ const Dashboard: React.FC<DashboardProps> = ({ employees, assignments, startDate
     }, [daysInMonth]);
 
     const isShiftInPeriod = (shiftCode: string, cat: string, checkPeriod: 'Manhã'|'Tarde'|'Noite'): boolean => {
-        if (!['Manhã', 'Tarde', 'Noite', 'Legenda Especial'].includes(cat)) return false;
+        if (!['Manhã', 'Tarde', 'Noite', 'Legenda Especial', 'Banco de Horas'].includes(cat)) return false;
         
+        if (cat === 'Banco de Horas' && (shiftCode.includes('-') || shiftCode.includes('NEG'))) return false;
+
         let isM = cat === 'Manhã';
         let isT = cat === 'Tarde';
         let isN = cat === 'Noite';
 
-        if (cat === 'Legenda Especial' || shiftCode.includes('ST6 SN12') || shiftCode.includes('SM6 ST6')) {
+        if (cat === 'Legenda Especial' || cat === 'Banco de Horas' || shiftCode.includes('ST6 SN12') || shiftCode.includes('SM6 ST6')) {
             if (shiftCode.includes('SM6 ST6')) {
                  isM = true; isT = true;
             } else if (shiftCode.includes('ST6 SN12')) {
@@ -205,8 +207,8 @@ const Dashboard: React.FC<DashboardProps> = ({ employees, assignments, startDate
             return cat === 'Banco de Horas';
         });
         
-        const positive = monthBanks.filter(a => a.duration > 0).reduce((sum, a) => sum + a.duration, 0);
-        const negative = monthBanks.filter(a => a.duration < 0).reduce((sum, a) => sum + a.duration, 0);
+        const positive = monthBanks.filter(a => a.duration > 0 && !a.shiftCode.includes('-') && !a.shiftCode.includes('NEG')).reduce((sum, a) => sum + a.duration, 0);
+        const negative = monthBanks.filter(a => a.duration < 0 || a.shiftCode.includes('-') || a.shiftCode.includes('NEG')).reduce((sum, a) => sum + Math.abs(a.duration), 0);
         
         return { positive, negative, total: positive + negative };
     }, [baseMonthAssignments, shiftDefs]);
@@ -331,7 +333,7 @@ const Dashboard: React.FC<DashboardProps> = ({ employees, assignments, startDate
                 const shiftDef = shiftDefs[assign.shiftCode];
                 if (emp && shiftDef) {
                     const cat = assign.category || shiftDef.category;
-                    const isAbsence = cat === 'Afastamento' || cat === 'Atividade Não Assistencial' || (cat === 'Banco de Horas' && assign.duration < 0);
+                    const isAbsence = cat === 'Afastamento' || cat === 'Atividade Não Assistencial' || (cat === 'Banco de Horas' && (assign.duration < 0 || assign.shiftCode.includes('-') || assign.shiftCode.includes('NEG')));
                     
                     if (employeeFilter !== 'Todos') {
                         let finalCat = 'Outros';
@@ -341,7 +343,7 @@ const Dashboard: React.FC<DashboardProps> = ({ employees, assignments, startDate
                         // We map Atividade Não Assistencial out of "Afastamento" for the individual breakdown if we want, or keep it distinct
                         // Actually, if isAbsence is true, we override it to Afastamento for the general view, but what about finalCat here?
                         // Let's keep finalCat as the real category, unless it's a negative Banco de Horas.
-                        if (cat === 'Banco de Horas' && assign.duration < 0) finalCat = 'Afastamento';
+                        if (cat === 'Banco de Horas' && (assign.duration < 0 || assign.shiftCode.includes('-') || assign.shiftCode.includes('NEG'))) finalCat = 'Afastamento';
 
                         let dur = Math.abs(assign.duration); // Use absolute for graph
                         if (assign.shiftCode.includes('SM6 ST6') && (periodFilter === 'Manhã' || periodFilter === 'Tarde')) {
@@ -407,7 +409,7 @@ const Dashboard: React.FC<DashboardProps> = ({ employees, assignments, startDate
                 const shiftDef = shiftDefs[assign.shiftCode];
                 if (emp && shiftDef) {
                     const cat = assign.category || shiftDef.category;
-                    const isAbsence = cat === 'Afastamento' || cat === 'Atividade Não Assistencial' || (cat === 'Banco de Horas' && assign.duration < 0);
+                    const isAbsence = cat === 'Afastamento' || cat === 'Atividade Não Assistencial' || (cat === 'Banco de Horas' && (assign.duration < 0 || assign.shiftCode.includes('-') || assign.shiftCode.includes('NEG')));
                     
                     let isMatch = false;
 
@@ -417,7 +419,7 @@ const Dashboard: React.FC<DashboardProps> = ({ employees, assignments, startDate
                         if (['Manhã', 'Tarde', 'Noite', 'Afastamento', 'Atividade Não Assistencial', 'Legenda Especial', 'Banco de Horas'].includes(cat)) {
                             finalCat = cat;
                         }
-                        if (cat === 'Banco de Horas' && assign.duration < 0) finalCat = 'Afastamento';
+                        if (cat === 'Banco de Horas' && (assign.duration < 0 || assign.shiftCode.includes('-') || assign.shiftCode.includes('NEG'))) finalCat = 'Afastamento';
 
                         if (finalCat === roleKey) {
                             isMatch = true;
