@@ -305,9 +305,9 @@ const ScaleGrid: React.FC<ScaleGridProps> = ({ employees, assignments, onAssignm
             } else if (shiftCode.includes('ST6 SN12')) {
                  isT = true; isN = true;
             } else {
-                 if (shiftCode.includes('M')) isM = true;
-                 if (shiftCode.includes('T') && !shiftCode.includes('ST6 SN12')) isT = true;
-                 if (shiftCode.includes('N')) isN = true;
+                 if (shiftCode.match(/SM|\bM\b/)) isM = true;
+                 if (shiftCode.match(/ST|\bT\b/)) isT = true;
+                 if (shiftCode.match(/SN|\bN\b/)) isN = true;
             }
         }
         
@@ -894,8 +894,8 @@ const ScaleGrid: React.FC<ScaleGridProps> = ({ employees, assignments, onAssignm
                                                         )}
                                                     </div>
                                                     <div className="text-[10px] text-gray-500 mt-0.5">{emp.role}</div>
-                                                    {emp.registration && (
-                                                        <div className="text-[10px] text-gray-400">Matrícula: {emp.registration}</div>
+                                                    {emp.matricula && (
+                                                        <div className="text-[10px] text-gray-400">Matrícula: {emp.matricula}</div>
                                                     )}
                                                 </div>
                                             </div>

@@ -36,8 +36,10 @@ const Settings: React.FC<SettingsProps> = ({ canEdit, professionalCategories, se
     
     // Unit (Nucleo) State
     const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
+    const [selectedSectorName, setSelectedSectorName] = useState<string | null>(null);
     const [newUnitName, setNewUnitName] = useState('');
     const [newUnitSectorName, setNewUnitSectorName] = useState('');
+    const [newWorkstationName, setNewWorkstationName] = useState('');
     
     const [newHour, setNewHour] = useState<string>('');
     
@@ -118,7 +120,40 @@ const Settings: React.FC<SettingsProps> = ({ canEdit, professionalCategories, se
         if (!confirm(`Deseja realmente remover o setor ${sectorName}?`)) return;
          const updatedUnits = settings.units.map(u => {
             if (u.id === unitId) {
-                return { ...u, sectors: u.sectors.filter(s => s !== sectorName) };
+                const subUnits = { ...(u.sectorSubunits || {}) };
+                delete subUnits[sectorName];
+                return { ...u, sectors: u.sectors.filter(s => s !== sectorName), sectorSubunits: subUnits };
+            }
+            return u;
+        });
+        await saveSettings({ ...settings, units: updatedUnits });
+        if (selectedSectorName === sectorName) setSelectedSectorName(null);
+    };
+
+    const handleAddWorkstation = async (unitId: string, sectorName: string) => {
+        if (!newWorkstationName.trim()) return;
+        const updatedUnits = settings.units.map(u => {
+            if (u.id === unitId) {
+                const subUnits = { ...(u.sectorSubunits || {}) };
+                const list = subUnits[sectorName] || [];
+                subUnits[sectorName] = [...list, newWorkstationName.trim()];
+                return { ...u, sectorSubunits: subUnits };
+            }
+            return u;
+        });
+        await saveSettings({ ...settings, units: updatedUnits });
+        setNewWorkstationName('');
+    };
+
+    const handleDeleteWorkstation = async (unitId: string, sectorName: string, workstation: string) => {
+        if (!confirm(`Deseja realmente remover a lotação ${workstation}?`)) return;
+        const updatedUnits = settings.units.map(u => {
+            if (u.id === unitId) {
+                const subUnits = { ...(u.sectorSubunits || {}) };
+                if (subUnits[sectorName]) {
+                    subUnits[sectorName] = subUnits[sectorName].filter(w => w !== workstation);
+                }
+                return { ...u, sectorSubunits: subUnits };
             }
             return u;
         });
@@ -384,9 +419,9 @@ const Settings: React.FC<SettingsProps> = ({ canEdit, professionalCategories, se
                             </div>
                         )}
 
-                        <div className="flex gap-4 flex-1 min-h-0 overflow-hidden">
+                        <div className="flex gap-4 flex-1 min-h-[300px] overflow-hidden">
                             {/* Lista de Núcleos */}
-                            <div className="w-1/2 flex flex-col bg-gray-50 rounded-lg border border-gray-200 overflow-hidden">
+                            <div className="w-1/3 flex flex-col bg-gray-50 rounded-lg border border-gray-200 overflow-hidden">
                                 <div className="bg-gray-100 px-3 py-2 text-xs font-bold text-gray-500 uppercase border-b border-gray-200">
                                     Núcleos
                                 </div>
@@ -394,7 +429,7 @@ const Settings: React.FC<SettingsProps> = ({ canEdit, professionalCategories, se
                                     {settings.units?.map(unit => (
                                         <div 
                                             key={unit.id} 
-                                            onClick={() => setSelectedUnitId(unit.id)}
+                                            onClick={() => { setSelectedUnitId(unit.id); setSelectedSectorName(null); }}
                                             className={`p-2 rounded flex justify-between items-center cursor-pointer transition-colors ${
                                                 selectedUnitId === unit.id ? 'bg-blue-100 text-blue-800 font-bold border-blue-200' : 'bg-white border-transparent hover:border-gray-200 text-gray-600'
                                             } border`}
@@ -416,8 +451,8 @@ const Settings: React.FC<SettingsProps> = ({ canEdit, professionalCategories, se
                                 </div>
                             </div>
 
-                            {/* Lista de Setores do Núcleo Selecionado */}
-                            <div className="w-1/2 flex flex-col bg-gray-50 rounded-lg border border-gray-200 overflow-hidden">
+                            {/* Lista de Setores */}
+                            <div className="w-1/3 flex flex-col bg-gray-50 rounded-lg border border-gray-200 overflow-hidden">
                                 <div className="bg-gray-100 px-3 py-2 text-xs font-bold text-gray-500 uppercase border-b border-gray-200">
                                     Setores vinculados
                                 </div>
@@ -431,20 +466,26 @@ const Settings: React.FC<SettingsProps> = ({ canEdit, professionalCategories, se
                                                         value={newUnitSectorName}
                                                         onChange={(e) => setNewUnitSectorName(e.target.value)}
                                                         placeholder="Novo setor..."
-                                                        className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-gdf-primary outline-none"
+                                                        className="flex-1 min-w-0 w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-gdf-primary outline-none"
                                                     />
-                                                    <button onClick={() => handleAddUnitSector(selectedUnitId)} className="bg-green-600 text-white px-2 rounded hover:bg-green-700">
+                                                    <button onClick={() => handleAddUnitSector(selectedUnitId)} className="shrink-0 bg-green-600 text-white px-2 rounded hover:bg-green-700">
                                                         <Plus size={16}/>
                                                     </button>
                                                 </div>
                                             )}
                                             <div className="overflow-y-auto flex-1 space-y-1">
                                                 {settings.units?.find(u => u.id === selectedUnitId)?.sectors.map(sector => (
-                                                    <div key={sector} className="bg-white border rounded p-2 flex justify-between items-center text-sm text-gray-600">
+                                                    <div 
+                                                        key={sector} 
+                                                        onClick={() => setSelectedSectorName(sector)}
+                                                        className={`border rounded p-2 flex justify-between items-center text-sm cursor-pointer transition-colors ${
+                                                            selectedSectorName === sector ? 'bg-blue-100 text-blue-800 font-bold border-blue-200' : 'bg-white text-gray-600 hover:border-gray-200'
+                                                        }`}
+                                                    >
                                                         <span className="truncate">{sector}</span>
                                                         {canEdit && (
                                                             <button 
-                                                                onClick={() => handleDeleteUnitSector(selectedUnitId, sector)}
+                                                                onClick={(e) => { e.stopPropagation(); handleDeleteUnitSector(selectedUnitId, sector); }}
                                                                 className="text-gray-400 hover:text-red-500 hover:bg-red-50 p-1 rounded transition-colors"
                                                             >
                                                                 <X size={14}/>
@@ -460,6 +501,55 @@ const Settings: React.FC<SettingsProps> = ({ canEdit, professionalCategories, se
                                     ) : (
                                         <div className="flex flex-1 items-center justify-center text-center px-4 text-xs text-gray-400 italic">
                                             Selecione um núcleo para ver e gerenciar os setores.
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Lista de Unidades/Viaturas do Setor Selecionado */}
+                            <div className="w-1/3 flex flex-col bg-gray-50 rounded-lg border border-gray-200 overflow-hidden">
+                                <div className="bg-gray-100 px-3 py-2 text-xs font-bold text-gray-500 uppercase border-b border-gray-200">
+                                    Subunidades / VTR (Lotação)
+                                </div>
+                                <div className="flex flex-col flex-1 p-2">
+                                    {selectedUnitId && selectedSectorName ? (
+                                        <>
+                                            {canEdit && (
+                                                <div className="flex gap-2 mb-2">
+                                                    <input
+                                                        type="text"
+                                                        value={newWorkstationName}
+                                                        onChange={(e) => setNewWorkstationName(e.target.value)}
+                                                        placeholder="Nova lotação..."
+                                                        className="flex-1 min-w-0 w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-gdf-primary outline-none"
+                                                    />
+                                                    <button onClick={() => handleAddWorkstation(selectedUnitId, selectedSectorName)} className="shrink-0 bg-green-600 text-white px-2 rounded hover:bg-green-700">
+                                                        <Plus size={16}/>
+                                                    </button>
+                                                </div>
+                                            )}
+                                            <div className="overflow-y-auto flex-1 space-y-1">
+                                                {(settings.units?.find(u => u.id === selectedUnitId)?.sectorSubunits?.[selectedSectorName] || []).map(workstation => (
+                                                    <div key={workstation} className="bg-white border rounded p-2 flex justify-between items-center text-sm text-gray-600">
+                                                        <span className="truncate">{workstation}</span>
+                                                        {canEdit && (
+                                                            <button 
+                                                                onClick={(e) => { e.stopPropagation(); handleDeleteWorkstation(selectedUnitId, selectedSectorName, workstation); }}
+                                                                className="text-gray-400 hover:text-red-500 hover:bg-red-50 p-1 rounded transition-colors"
+                                                            >
+                                                                <X size={14}/>
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                                {(settings.units?.find(u => u.id === selectedUnitId)?.sectorSubunits?.[selectedSectorName] || []).length === 0 && (
+                                                    <div className="text-center py-4 text-xs text-gray-400 italic">Nenhuma subunidade.</div>
+                                                )}
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <div className="flex flex-1 items-center justify-center text-center px-4 text-xs text-gray-400 italic">
+                                            Selecione um setor para gerenciar suas lotações/viaturas.
                                         </div>
                                     )}
                                 </div>

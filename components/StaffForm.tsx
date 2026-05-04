@@ -47,22 +47,29 @@ const StaffForm: React.FC<StaffFormProps> = ({ onSave, onCancel, initialData, pr
         // Se ainda não temos a lista de unidades carregada ou não há unidade selecionada, não fazemos nada
         if (!formData.unit || units.length === 0) return;
 
-        const currentUnit = units.find(u => u.name.trim() === formData.unit.trim());
+        const currentUnit = units.find(u => u.name.trim().toLowerCase() === formData.unit?.trim().toLowerCase());
         
         if (currentUnit && currentUnit.sectors) {
             // Só alteramos o setor automaticamente se:
             // 1. O servidor NÃO for uma edição (novo cadastro)
             // 2. OU se o setor atual for inválido para a unidade selecionada
-            const isSectorValid = formData.sector && currentUnit.sectors.includes(formData.sector);
+            const isSectorValid = formData.sector && currentUnit.sectors.some(s => s.trim().toLowerCase() === formData.sector!.trim().toLowerCase());
             
             if (!isSectorValid) {
                 setFormData(prev => ({ 
                     ...prev, 
+                    unit: currentUnit.name, // Correção de possível divergência de formatação no nome do núcleo
                     sector: currentUnit.sectors[0] || '' 
+                }));
+            } else if (formData.unit !== currentUnit.name) {
+                // Sincroniza o nome exato se o match for apenas case/trim
+                 setFormData(prev => ({ 
+                    ...prev, 
+                    unit: currentUnit.name
                 }));
             }
         }
-    }, [formData.unit, units]); // Removido formData.id para simplificar e evitar re-triggers desnecessários
+    }, [formData.unit, units]);
 
     const [prefs, setPrefs] = useState<EmployeePreferences>(initialData?.preferences || defaultPreferences);
 
@@ -119,6 +126,7 @@ const StaffForm: React.FC<StaffFormProps> = ({ onSave, onCancel, initialData, pr
                 contractHours: Number(formData.contractHours),
                 unit: formData.unit || '',
                 sector: formData.sector || '', 
+                workstation: formData.workstation || '',
                 cnes: formData.cnes || '',
                 contact: formData.contact || '',
                 restrictions: formData.restrictions || '',
@@ -324,8 +332,24 @@ const StaffForm: React.FC<StaffFormProps> = ({ onSave, onCancel, initialData, pr
                                 className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-gdf-primary focus:border-transparent transition-all shadow-sm cursor-pointer"
                             >
                                 <option value="" disabled>Selecione um setor...</option>
-                                {units.find(u => u.name.trim() === (formData.unit || '').trim())?.sectors?.map((s) => (
+                                {units.find(u => u.name.trim().toLowerCase() === (formData.unit || '').trim().toLowerCase())?.sectors?.map((s) => (
                                     <option key={s} value={s}>{s}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">Subunidade / Lotação</label>
+                            <select
+                                name="workstation"
+                                value={formData.workstation || ''}
+                                onChange={handleChange}
+                                disabled={!formData.sector || !(units.find(u => u.name.trim().toLowerCase() === (formData.unit || '').trim().toLowerCase())?.sectorSubunits?.[formData.sector]) || units.find(u => u.name.trim().toLowerCase() === (formData.unit || '').trim().toLowerCase())?.sectorSubunits?.[formData.sector]?.length === 0}
+                                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-gdf-primary focus:border-transparent transition-all shadow-sm cursor-pointer disabled:bg-gray-100 disabled:text-gray-500"
+                            >
+                                <option value="">Geral do Setor</option>
+                                {(units.find(u => u.name.trim().toLowerCase() === (formData.unit || '').trim().toLowerCase())?.sectorSubunits?.[formData.sector || ''] || []).map((su) => (
+                                    <option key={su} value={su}>{su}</option>
                                 ))}
                             </select>
                         </div>

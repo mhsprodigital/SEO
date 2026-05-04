@@ -26,6 +26,7 @@ export interface Employee {
     contractHours: number;
     unit: string;
     sector: string; 
+    workstation?: string;
     cnes: string;
     contact: string;
     restrictions?: string;
@@ -77,6 +78,7 @@ export interface UnitStructure {
     id: string;
     name: string;
     sectors: string[];
+    sectorSubunits?: Record<string, string[]>; // sectorName -> array of sub-units
 }
 
 export type UserRole = 'ADMIN' | 'EDITOR' | 'VIEWER';

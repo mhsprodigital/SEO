@@ -143,12 +143,11 @@ const Dashboard: React.FC<DashboardProps> = ({ employees, assignments, startDate
         let filtered = assignments.filter(a => {
             const def = shiftDefs[a.shiftCode];
             const cat = a.category || def?.category;
-            // Excluir bloqueios, datas fora do mês e afastamentos/banco de horas da contagem de ASSISTÊNCIA
-            return a.shiftCode !== 'BLK' && 
-                   monthDateStrings.has(a.date) && 
-                   cat !== 'Afastamento' && 
-                   cat !== 'Banco de Horas' &&
-                   cat !== 'Legenda Especial'; // TPDs não entram em carga horária normal
+            // Excluir bloqueios, datas fora do mês e afastamentos/banco de horas DA CONTAGEM normal (exceto se positivo e quisermos contar. Wait, the rule is positive BH counts).
+            if (a.shiftCode === 'BLK' || !monthDateStrings.has(a.date)) return false;
+            if (cat === 'Afastamento' || cat === 'Legenda Especial') return false; // TPDs não entram em carga horária normal
+            if (cat === 'Banco de Horas' && (a.duration < 0 || a.shiftCode.includes('-') || a.shiftCode.includes('NEG'))) return false;
+            return true;
         });
         
         if (employeeFilter !== 'Todos') {
@@ -345,7 +344,7 @@ const Dashboard: React.FC<DashboardProps> = ({ employees, assignments, startDate
                         // Let's keep finalCat as the real category, unless it's a negative Banco de Horas.
                         if (cat === 'Banco de Horas' && (assign.duration < 0 || assign.shiftCode.includes('-') || assign.shiftCode.includes('NEG'))) finalCat = 'Afastamento';
 
-                        let dur = Math.abs(assign.duration); // Use absolute for graph
+                        let dur = assign.duration > 0 ? assign.duration : 0; // Use positive only for graph as requested (não descontar, apenas não contar)
                         if (assign.shiftCode.includes('SM6 ST6') && (periodFilter === 'Manhã' || periodFilter === 'Tarde')) {
                             dur = 6;
                         }
@@ -356,7 +355,7 @@ const Dashboard: React.FC<DashboardProps> = ({ employees, assignments, startDate
                             uniqueEmployeesPerRole[roleKey].add(assign.employeeId);
                             
                             if (chartMetric === 'hours') {
-                                let dur = assign.duration;
+                                let dur = assign.duration > 0 ? assign.duration : 0; // Do not subtract negative hours
                                 if (assign.shiftCode.includes('SM6 ST6') && (periodFilter === 'Manhã' || periodFilter === 'Tarde')) {
                                     dur = 6;
                                 }

@@ -209,7 +209,7 @@ const App: React.FC = () => {
                        oldA.allocation?.type !== newA.allocation?.type;
             });
             const newIds = new Set(newAssignments.map(a => a.id));
-            const deletedIds = assignments
+            const deletedIds = accessibleAssignments
                 .filter(a => !newIds.has(a.id))
                 .map(a => a.id);
             
@@ -237,31 +237,41 @@ const App: React.FC = () => {
     // Filtering state
     const [globalUnitFilter, setGlobalUnitFilter] = useState<string>('Todos');
     const [globalSectorFilter, setGlobalSectorFilter] = useState<string>('Todos');
+    const [globalWorkstationFilter, setGlobalWorkstationFilter] = useState<string>('Todos');
 
     // Force unit filter if user has limited access
     const effectiveUnitFilter = userUnitAccess || globalUnitFilter;
 
     useEffect(() => {
-        // Reset sector when unit changes
+        // Reset sector and workstation when unit changes
         setGlobalSectorFilter('Todos');
+        setGlobalWorkstationFilter('Todos');
     }, [effectiveUnitFilter]);
+
+    useEffect(() => {
+        // Reset workstation when sector changes
+        setGlobalWorkstationFilter('Todos');
+    }, [globalSectorFilter]);
 
     const accessibleEmployees = useMemo(() => {
         let filtered = employees;
         if (effectiveUnitFilter && effectiveUnitFilter !== 'Todos') {
-            filtered = filtered.filter(emp => emp.unit === effectiveUnitFilter);
+            filtered = filtered.filter(emp => emp.unit?.trim().toLowerCase() === effectiveUnitFilter.trim().toLowerCase());
         }
         if (globalSectorFilter && globalSectorFilter !== 'Todos') {
-            filtered = filtered.filter(emp => emp.sector === globalSectorFilter);
+            filtered = filtered.filter(emp => emp.sector?.trim().toLowerCase() === globalSectorFilter.trim().toLowerCase());
+        }
+        if (globalWorkstationFilter && globalWorkstationFilter !== 'Todos') {
+            filtered = filtered.filter(emp => emp.workstation?.trim().toLowerCase() === globalWorkstationFilter.trim().toLowerCase());
         }
         return filtered;
-    }, [employees, effectiveUnitFilter, globalSectorFilter]);
+    }, [employees, effectiveUnitFilter, globalSectorFilter, globalWorkstationFilter]);
 
     const accessibleAssignments = useMemo(() => {
-        if (effectiveUnitFilter === 'Todos' && globalSectorFilter === 'Todos') return assignments;
+        if (effectiveUnitFilter === 'Todos' && globalSectorFilter === 'Todos' && globalWorkstationFilter === 'Todos') return assignments;
         const accessibleIds = new Set(accessibleEmployees.map(e => e.id));
         return assignments.filter(a => accessibleIds.has(a.employeeId));
-    }, [assignments, accessibleEmployees, effectiveUnitFilter, globalSectorFilter]);
+    }, [assignments, accessibleEmployees, effectiveUnitFilter, globalSectorFilter, globalWorkstationFilter]);
 
     if (isAuthChecking) {
         return (
@@ -648,13 +658,23 @@ const App: React.FC = () => {
                                 </select>
                             )}
                             <select 
-                                className="text-xs font-semibold bg-white border border-gray-300 rounded px-2 py-1 text-gray-700 outline-none focus:ring-1 focus:ring-gdf-primary"
+                                className="text-xs font-semibold bg-white border border-gray-300 rounded px-2 py-1 text-gray-700 outline-none focus:ring-1 focus:ring-gdf-primary max-w-[150px] truncate"
                                 value={globalSectorFilter}
                                 onChange={(e) => setGlobalSectorFilter(e.target.value)}
                             >
-                                <option value="Todos">Todos os Setores{effectiveUnitFilter !== 'Todos' ? ` do Núcleo` : ''}</option>
-                                {settings?.units?.find((u: any) => u.name.trim() === effectiveUnitFilter.trim())?.sectors?.map((s: string) => (
+                                <option value="Todos">Todos os Setores</option>
+                                {settings?.units?.find((u: any) => u.name.trim().toLowerCase() === effectiveUnitFilter.trim().toLowerCase())?.sectors?.map((s: string) => (
                                     <option key={s} value={s}>{s}</option>
+                                ))}
+                            </select>
+                            <select
+                                className="text-xs font-semibold bg-white border border-gray-300 rounded px-2 py-1 text-gray-700 outline-none focus:ring-1 focus:ring-gdf-primary max-w-[150px] truncate"
+                                value={globalWorkstationFilter}
+                                onChange={(e) => setGlobalWorkstationFilter(e.target.value)}
+                            >
+                                <option value="Todos">Todas Lotações</option>
+                                {globalSectorFilter !== 'Todos' && settings?.units?.find((u: any) => u.name.trim().toLowerCase() === effectiveUnitFilter.trim().toLowerCase())?.sectorSubunits?.[globalSectorFilter]?.map((w: string) => (
+                                    <option key={w} value={w}>{w}</option>
                                 ))}
                             </select>
                         </div>
